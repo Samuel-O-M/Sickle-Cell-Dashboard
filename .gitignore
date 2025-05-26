@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules
+/.pnp
+/.pnp.js
+/.pnp.cjs
+
+# Testing directories
+/coverage
+
+# Output of build process
+dist
+dist-ssr
+build/
+out/
+
+# Output of vite-press
+/.vitepress/cache
+/.vitepress/dist
+
+# Cache files
+/.eslintcache
+/.stylelintcache
+
+# dotenv environment variables file
+.env
+.env.local
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
