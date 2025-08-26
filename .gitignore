@@ -36,6 +36,7 @@ out/
 .env.*.local
 
 # Editor directories and files
+.cursor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -45,3 +46,6 @@ out/
 *.njsproj
 *.sln
 *.sw?
+
+# Private files
+public/scd.csv
