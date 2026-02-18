@@ -16,15 +16,24 @@ import {
     Legend
 } from 'recharts'
 
+const generateImagePaths = (folderName, count) => {
+    const paths = [];
+    const base_path = `/dukebox_images/${folderName}`;
+    for (let i = 1; i <= count; i++) {
+        const number = i.toString().padStart(2, '0');
+        paths.push(`${base_path}/${number}.webp`);
+    }
+    return paths;
+};
 
 function Fundraising() {
 
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
     const [currentCarousel, setCurrentCarousel] = useState({})
-    const [visibleGalleries, setVisibleGalleries] = useState(new Set(['chapel'])) // Load first gallery
-    const [imageLoading, setImageLoading] = useState({})
-    const [isScrolled, setIsScrolled] = useState(false) 
+    const [_visibleGalleries, setVisibleGalleries] = useState(new Set(['chapel'])) // Load first gallery
+    const [_imageLoading, _setImageLoading] = useState({})
+    const [isScrolled, setIsScrolled] = useState(false)
     const [activeGalleryKey, setActiveGalleryKey] = useState('chapel') // Default to first gallery
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -63,18 +72,9 @@ function Fundraising() {
             })
     }, [])
 
-    const generateImagePaths = (folderName, count) => {
-        const paths = [];
-        const base_path = `/dukebox_images/${folderName}`;
-        for (let i = 1; i <= count; i++) {
-            const number = i.toString().padStart(2, '0');
-            paths.push(`${base_path}/${number}.webp`);
-        }
-        return paths;
-    };
 
     // Image galleries
-    const galleries = {
+    const galleries = useMemo(() => ({
         chapel: {
             title: "2025 Chapati Party - Community Celebration",
             images: generateImagePaths('2025-chapati-party', 21)
@@ -103,7 +103,7 @@ function Fundraising() {
             title: "Skills Training - Bead Making for Economic Empowerment",
             images: generateImagePaths('skills-training-bead-making-khciv-sickle-cell', 2)
         }
-    }
+    }), [])
 
     // Initialize carousel states
     useEffect(() => {
@@ -112,7 +112,7 @@ function Fundraising() {
             initial[key] = 0
         })
         setCurrentCarousel(initial)
-    }, [])
+    }, [galleries])
 
     // Intersection Observer for lazy loading galleries
     useEffect(() => {
@@ -265,7 +265,7 @@ function Fundraising() {
     ]
 
 
-    const scrollToDonate = () => {
+    const _scrollToDonate = () => {
 
         document.getElementById('donate-section')?.scrollIntoView({ behavior: 'smooth' })
 
