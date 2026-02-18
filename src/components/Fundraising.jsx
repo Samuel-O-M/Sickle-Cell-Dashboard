@@ -18,7 +18,7 @@ import {
 
 const generateImagePaths = (folderName, count) => {
     const paths = [];
-    const base_path = `/dukebox_images/${folderName}`;
+    const base_path = `${import.meta.env.BASE_URL}dukebox_images/${folderName}`;
     for (let i = 1; i <= count; i++) {
         const number = i.toString().padStart(2, '0');
         paths.push(`${base_path}/${number}.webp`);
@@ -49,7 +49,7 @@ function Fundraising() {
 
     useEffect(() => {
         setLoading(true)
-        fetch('/fundraising.csv')
+        fetch(import.meta.env.BASE_URL + 'fundraising.csv')
             .then((response) => response.text())
             .then((text) => {
                 const parsed = Papa.parse(text, {
@@ -239,28 +239,28 @@ function Fundraising() {
             name: 'Duke University',
             sub: 'School of Medicine & Global Health Institute',
             people: 'Kearsley Stewart, Charmaine Royal, Nirmish Shah, Stephanie Ibemere',
-            logo: '/img/duke_logo.png'
+            logo: import.meta.env.BASE_URL + 'img/duke_logo.png'
         },
         {
             id: 'makerere',
             name: 'Makerere University',
             sub: 'Mulago National Referral Hospital',
             people: 'Deogratias Munube',
-            logo: '/img/makerere_logo.png'
+            logo: import.meta.env.BASE_URL + 'img/makerere_logo.png'
         },
         {
             id: 'kalangala',
             name: 'Kalangala Health Center IV',
             sub: 'Local Clinical Leadership',
             people: 'Joel Kibonwabake, Clinic Director',
-            logo: '/img/health_center_logo.png'
+            logo: import.meta.env.BASE_URL + 'img/health_center_logo.png'
         },
         {
             id: 'kunihira',
             name: 'Kunihira Sickle Cell Org',
             sub: 'Local Community NGO',
             people: 'Grassroots support for patients and families',
-            logo: '/img/kushco_logo.png'
+            logo: import.meta.env.BASE_URL + 'img/kushco_logo.png'
         }
     ]
 
@@ -331,7 +331,7 @@ function Fundraising() {
                         {/* Logo: Scales down on scroll */}
                         <div className={`relative transition-all duration-500 ${isScrolled ? 'w-10 h-10' : 'w-24 h-24 sm:w-32 sm:h-32'}`}>
                            <img 
-                                src="/logo.svg" 
+                                src={import.meta.env.BASE_URL + "logo.svg"}
                                 alt="Sickle Cell Clinic Logo" 
                                 className="w-full h-full object-contain filter drop-shadow-md"
                            />
@@ -362,9 +362,9 @@ function Fundraising() {
                                 className="h-8 sm:h-12 rounded shadow-sm border border-white/10" 
                             />
                             <div className="flex gap-3 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                                <img src="/img/duke_logo.png" alt="Duke" className="h-8 sm:h-10 object-contain" />
+                                <img src={import.meta.env.BASE_URL + "img/duke_logo.png"} alt="Duke" className="h-8 sm:h-10 object-contain" />
                                 <div className="w-px h-8 sm:h-10 bg-white/20"></div>
-                                <img src="/img/unc_logo.png" alt="UNC" className="h-8 sm:h-10 object-contain" />
+                                <img src={import.meta.env.BASE_URL + "img/unc_logo.png"} alt="UNC" className="h-8 sm:h-10 object-contain" />
                             </div>
                         </div>
                     </div>
