@@ -1,8 +1,10 @@
-function ChartCard({ title, children, height = 'h-80', className = '' }) {
+function ChartCard({ title, children }) {
   return (
-    <div className={`bg-white shadow rounded p-4 ${height} ${className}`}>
-      <h2 className="text-lg font-semibold mb-2 text-gray-800">{title}</h2>
-      {children}
+    <div className="chart-card">
+      <h3 className="chart-title">{title}</h3>
+      <div className="chart-content">
+        {children}
+      </div>
     </div>
   )
 }

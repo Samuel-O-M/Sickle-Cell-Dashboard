@@ -48,4 +48,4 @@ out/
 *.sw?
 
 # Private files
-public/scd.csv
+src/private/
