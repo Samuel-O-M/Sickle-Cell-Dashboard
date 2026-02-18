@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "/Sickle-Cell-Dashboard/",
   server: {
     allowedHosts: ['modest-exactly-asp.ngrok-free.app', 'localhost', '127.0.0.1', '0.0.0.0'],
   },
