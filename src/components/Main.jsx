@@ -1,7 +1,9 @@
 function Main() {
   // Navigation helper
   const navigate = (path) => {
-    window.location.href = path
+    const base = import.meta.env.BASE_URL;
+    const fullPath = base + (path.startsWith('/') ? path.slice(1) : path);
+    window.location.href = fullPath;
   }
 
   return (

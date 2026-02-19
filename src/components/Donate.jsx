@@ -51,13 +51,13 @@ function Donate() {
             <div className="h-px w-full bg-white/20 mb-6"></div>
             <div className="flex flex-wrap items-center gap-4 opacity-90">
                {/* Main Logo (Assuming logo.svg is in public folder) */}
-               <img src="/logo.svg" alt="Project Logo" className="h-10 brightness-0 invert" />
+               <img src={import.meta.env.BASE_URL + 'logo.svg'} alt="Project Logo" className="h-10 brightness-0 invert" />
                
                {/* Duke Logo */}
-               <img src="/img/duke_logo.png" alt="Duke University" className="h-8 brightness-0 invert opacity-80" />
+               <img src={import.meta.env.BASE_URL + 'img/duke_logo.png'} alt="Duke University" className="h-8 brightness-0 invert opacity-80" />
                
                {/* UNC Logo */}
-               <img src="/img/unc_logo.png" alt="UNC" className="h-8 brightness-0 invert opacity-80" />
+               <img src={import.meta.env.BASE_URL + 'img/unc_logo.png'} alt="UNC" className="h-8 brightness-0 invert opacity-80" />
                
                {/* Uganda Flag */}
                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Flag_of_Uganda.svg/320px-Flag_of_Uganda.svg.png" alt="Uganda" className="h-8 rounded shadow-sm opacity-90" />

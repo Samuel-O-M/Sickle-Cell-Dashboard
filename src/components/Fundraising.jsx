@@ -300,7 +300,7 @@ function Fundraising() {
             {/* Sticky Donate Button */}
 
             <button
-                onClick={() => window.open('/donate', '_blank')}
+                onClick={() => window.open(import.meta.env.BASE_URL + 'donate', '_blank')}
                 className="fixed bottom-8 right-8 bg-[#c3a86b] hover:bg-[#b0955b] text-white px-8 py-4 rounded-full shadow-2xl z-40 font-bold text-lg transition-all duration-200 hover:scale-105 flex items-center gap-2 group"
             >
                 <div className="bg-white/20 p-1 rounded-full group-hover:rotate-12 transition-transform">
