@@ -23,7 +23,7 @@ function Dashboard() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(import.meta.env.BASE_URL + 'clinical.csv')
+    fetch(import.meta.env.BASE_URL + 'src/private/clinical.csv')
       .then((response) => response.text())
       .then((text) => {
         const parsed = Papa.parse(text, {
