@@ -8,7 +8,6 @@ import './App.css'
 
 function App() {
   return (
-    // import.meta.env.BASE_URL reads the "base" value from your vite.config.js
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<Fundraising />} />
