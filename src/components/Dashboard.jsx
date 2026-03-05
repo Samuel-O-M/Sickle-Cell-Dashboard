@@ -1,6 +1,7 @@
 // Dashboard.jsx
 import { useEffect, useState, useMemo } from 'react'
 import Papa from 'papaparse'
+import { useAuth } from '../contexts/AuthContext'
 import {
   BarChart,
   Bar,
@@ -22,29 +23,37 @@ function Dashboard() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const { isAuthenticated, fetchData, error: authError } = useAuth()
+  const [error, setError] = useState(null)
+
   useEffect(() => {
+    if (!isAuthenticated) {
+      // Not logged in, show empty charts
+      setData([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
-    fetch(import.meta.env.BASE_URL + 'src/private/clinical.csv')
-      .then((response) => response.text())
-      .then((text) => {
-        const parsed = Papa.parse(text, {
-          header: true,
-          dynamicTyping: false,
-          skipEmptyLines: true,
-        })
-        const validData = parsed.data.filter(row => 
-          row['Main ID#'] && 
+    setError(null)
+    fetchData()
+      .then((jsonData) => {
+        // The backend returns an array of objects, same as CSV parsed
+        const validData = jsonData.filter(row =>
+          row['Main ID#'] &&
           row['Main ID#'].toString().trim() !== ''
         )
-        console.log('Loaded clinical data:', validData.length, 'records')
+        console.log('Loaded clinical data from backend:', validData.length, 'records')
         setData(validData)
         setLoading(false)
       })
       .catch((err) => {
-        console.error('Failed to load CSV', err)
+        console.error('Failed to load data from backend', err)
+        setError(err.message)
         setLoading(false)
+        setData([])
       })
-  }, [])
+  }, [isAuthenticated, fetchData])
 
   // ... (All helper functions and useMemos remain exactly the same as your code: parseNumber, visitPatterns, patientStatusDistribution, hydroxyureaUsage, dosageDistribution, clinicalEvents, labValuesSummary, vitalSignsSummary, summaryStats, CHART_COLORS, PIE_COLORS) ...
   // Re-pasting them below for completeness as requested:

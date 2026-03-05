@@ -1,6 +1,7 @@
 // PatientDashboard.jsx
 import { useEffect, useState, useMemo } from 'react'
 import Papa from 'papaparse'
+import { useAuth } from '../contexts/AuthContext'
 import {
   LineChart,
   Line,
@@ -23,28 +24,35 @@ function PatientDashboard() {
   const [patientData, setPatientData] = useState(null)
   const [selectedMetric, setSelectedMetric] = useState('vitals')
 
+  const { isAuthenticated, fetchData, error: authError } = useAuth()
+  const [error, setError] = useState(null)
+
   useEffect(() => {
+    if (!isAuthenticated) {
+      // Not logged in, show empty data
+      setData([])
+      setLoading(false)
+      setError(null)
+      return
+    }
     setLoading(true)
-    fetch(import.meta.env.BASE_URL + 'src/private/clinical.csv')
-      .then((response) => response.text())
-      .then((text) => {
-        const parsed = Papa.parse(text, {
-          header: true,
-          dynamicTyping: false,
-          skipEmptyLines: true,
-        })
-        const validData = parsed.data.filter(row => 
+    setError(null)
+    fetchData()
+      .then((jsonData) => {
+        const validData = jsonData.filter(row =>
           row['Main ID#'] && row['Main ID#'].toString().trim() !== ''
         )
-        console.log('Loaded patient data:', validData.length, 'records')
+        console.log('Loaded patient data from backend:', validData.length, 'records')
         setData(validData)
         setLoading(false)
       })
       .catch((err) => {
-        console.error('Failed to load CSV', err)
+        console.error('Failed to load data from backend', err)
+        setError(err.message)
         setLoading(false)
+        setData([])
       })
-  }, [])
+  }, [isAuthenticated, fetchData])
 
   // ... (All helper functions and logic remain exactly the same: parseNumber, uniquePatientIds, useEffect for filtering, vitalSignsData, labValuesData, anthropometricData, treatmentHistory, visitTimeline, patientSummary, handleSearch, handleKeyPress, CHART_COLORS) ...
   // Repasting for completeness:
