@@ -1,3 +1,4 @@
+// Fundraising.jsx
 import { useEffect, useState, useMemo, useRef } from 'react'
 
 import Papa from 'papaparse'
@@ -36,6 +37,7 @@ function Fundraising() {
     const [isScrolled, setIsScrolled] = useState(false)
     const [activeGalleryKey, setActiveGalleryKey] = useState('chapel') // Default to first gallery
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [activeSection, setActiveSection] = useState('hero')
 
     const galleryRefs = useRef({})
     
@@ -105,6 +107,16 @@ function Fundraising() {
         }
     }), [])
 
+    // Section navigation
+    const sections = useMemo(() => [
+        { id: 'hero', label: 'Hero' },
+        { id: 'crisis', label: 'The Crisis' },
+        { id: 'gallery', label: 'Gallery' },
+        { id: 'impact', label: 'Impact' },
+        { id: 'goals', label: 'Goals' },
+        { id: 'resources', label: 'Resources' },
+    ], [])
+
     // Initialize carousel states
     useEffect(() => {
         const initial = {}
@@ -136,6 +148,24 @@ function Fundraising() {
         }
     }, [galleries])
 
+    // Intersection Observer for section navigation
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.id)
+                }
+            })
+        }, { rootMargin: '-20% 0px -30% 0px' }) // Negative margins to trigger when clearly in view
+
+        sections.forEach(({ id }) => {
+            const element = document.getElementById(id)
+            if (element) observer.observe(element)
+        })
+
+        return () => observer.disconnect()
+    }, [sections])
+
     const nextImage = (galleryKey) => {
         setCurrentCarousel(prev => ({
             ...prev,
@@ -160,6 +190,15 @@ function Fundraising() {
             return parsed
         }
         return 0
+    }
+
+    // Scroll to section helper
+    const scrollToSection = (id) => {
+        setActiveSection(id)
+        const element = document.getElementById(id)
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' })
+        }
     }
 
 
@@ -297,6 +336,24 @@ function Fundraising() {
 
         <div className="min-h-screen bg-white">
 
+            {/* Section Navigation Dots */}
+            <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 flex flex-col items-center gap-3">
+                {sections.map(({ id, label }) => (
+                    <button
+                        key={id}
+                        onClick={() => scrollToSection(id)}
+                        className="relative group flex items-center justify-center w-10 h-10 transition-all duration-300"
+                    >
+                        {/* Dot */}
+                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${activeSection === id ? 'bg-[#478c7b] scale-150' : 'bg-gray-400'}`} />
+                        {/* Tooltip */}
+                        <span className={`absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded transition-opacity whitespace-nowrap ${activeSection === id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                            {label}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
             {/* Sticky Donate Button */}
 
             <button
@@ -314,7 +371,7 @@ function Fundraising() {
 
             {/* Hero Section */}
             {/* NEW: Spacer div to push content down. Matches header height. */}
-            <div className={`transition-all duration-500 ease-in-out ${isScrolled ? 'h-24' : 'h-[28rem]'}`}></div>
+            <div id="hero" className={`transition-all duration-500 ease-in-out ${isScrolled ? 'h-24' : 'h-[28rem]'}`}></div>
 
             {/* NEW: Sticky Header */}
             <header 
@@ -380,7 +437,7 @@ function Fundraising() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
                         {/* Window 1: The Crisis We Face */}
-                        <div className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#c3a86b] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
+                        <div id="crisis" className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#c3a86b] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-3 bg-red-50 rounded-full">
                                     <svg className="w-8 h-8 text-[#c3a86b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -511,7 +568,7 @@ function Fundraising() {
             </div>
 
             {/* Task 4: Interactive Gallery Selector */}
-            <div className="py-24 bg-white relative overflow-hidden">
+            <div id="gallery" className="py-24 bg-white relative overflow-hidden">
                 
                 <div className="max-w-5xl mx-auto px-4 relative z-10">
 
@@ -616,7 +673,7 @@ function Fundraising() {
 
             {/* Task 5: Combined Impact & Collaborators Section */}
             
-            <div className="py-20 relative overflow-hidden" style={{ backgroundColor: brandColors.bg }}>
+            <div id="impact" className="py-20 relative overflow-hidden" style={{ backgroundColor: brandColors.bg }}>
                 {/* Decorative Background Elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-5">
                     <svg className="absolute -left-20 top-20 w-96 h-96 text-[#478c7b]" fill="currentColor" viewBox="0 0 200 200">
@@ -785,7 +842,7 @@ function Fundraising() {
 
             {/* Project Goals */}
 
-            <div className="bg-gradient-to-br from-blue-900 to-emerald-900 text-white py-16">
+            <div id="goals" className="bg-gradient-to-br from-blue-900 to-emerald-900 text-white py-16">
 
                 <div className="max-w-6xl mx-auto px-4">
 
@@ -1079,7 +1136,7 @@ function Fundraising() {
 
             {/* Media & Resources */}
 
-            <div className="bg-gray-100 py-16">
+            <div id="resources" className="bg-gray-100 py-16">
 
                 <div className="max-w-6xl mx-auto px-4">
 
