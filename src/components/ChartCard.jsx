@@ -1,3 +1,4 @@
+// ChartCard.jsx
 function ChartCard({ title, children }) {
   return (
     <div className="chart-card">

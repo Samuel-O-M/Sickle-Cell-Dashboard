@@ -1,3 +1,4 @@
+// Main.jsx
 function Main() {
   // Navigation helper
   const navigate = (path) => {

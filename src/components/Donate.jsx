@@ -1,3 +1,4 @@
+// Donate.jsx
 // Replace the entire content of components/Donate.jsx with this:
 
 function Donate() {
