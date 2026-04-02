@@ -1,8 +1,6 @@
 // Fundraising.jsx
 import { useEffect, useState, useMemo, useRef } from 'react'
-
 import Papa from 'papaparse'
-
 import {
     BarChart,
     Bar,
@@ -17,38 +15,67 @@ import {
     Legend
 } from 'recharts'
 
+// Duke Blue: #012169, Carolina Blue: #4B9CD3
+const BRAND_COLORS = {
+    dukeBlue: '#012169',
+    carolinaBlue: '#4B9CD3',
+    lightBlue: '#93c5fd',
+    gold: '#c3a86b',
+    bg: '#f8fafc'
+}
+
+const CHART_COLORS = [BRAND_COLORS.dukeBlue, BRAND_COLORS.carolinaBlue, BRAND_COLORS.lightBlue, '#1e3a5f', '#7dd3fc', '#bfdbfe']
+
 const generateImagePaths = (folderName, count) => {
-    const paths = [];
-    const base_path = `${import.meta.env.BASE_URL}dukebox_images/${folderName}`;
+    const paths = []
+    const base_path = `${import.meta.env.BASE_URL}dukebox_images/${folderName}`
     for (let i = 1; i <= count; i++) {
-        const number = i.toString().padStart(2, '0');
-        paths.push(`${base_path}/${number}.webp`);
+        const number = i.toString().padStart(2, '0')
+        paths.push(`${base_path}/${number}.webp`)
     }
-    return paths;
-};
+    return paths
+}
 
 function Fundraising() {
-
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
     const [currentCarousel, setCurrentCarousel] = useState({})
-    const [_visibleGalleries, setVisibleGalleries] = useState(new Set(['chapel'])) // Load first gallery
-    const [_imageLoading, _setImageLoading] = useState({})
     const [isScrolled, setIsScrolled] = useState(false)
-    const [activeGalleryKey, setActiveGalleryKey] = useState('chapel') // Default to first gallery
+    const [activeGalleryKey, setActiveGalleryKey] = useState('chapel')
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [activeSection, setActiveSection] = useState('hero')
 
     const galleryRefs = useRef({})
-    
+
+    // Scroll handler for sticky header
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50)
-        }
+        const handleScroll = () => setIsScrolled(window.scrollY > 50)
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
+    // Load Tableau script for interactive map
+    useEffect(() => {
+        const loadTableau = () => {
+            const divElement = document.getElementById('viz1772666220077')
+            if (divElement) {
+                const vizElement = divElement.getElementsByTagName('object')[0]
+                if (vizElement) {
+                    vizElement.style.width = '100%'
+                    vizElement.style.height = '650px'
+                    const scriptElement = document.createElement('script')
+                    scriptElement.src = 'https://public.tableau.com/javascripts/api/viz_v1.js'
+                    vizElement.parentNode.insertBefore(scriptElement, vizElement)
+                }
+            }
+        }
+
+        // Small delay to ensure DOM is ready
+        const timer = setTimeout(loadTableau, 100)
+        return () => clearTimeout(timer)
+    }, [loading])
+
+    // Load fundraising data
     useEffect(() => {
         setLoading(true)
         fetch(import.meta.env.BASE_URL + 'fundraising.csv')
@@ -73,7 +100,6 @@ function Fundraising() {
                 setLoading(false)
             })
     }, [])
-
 
     // Image galleries
     const galleries = useMemo(() => ({
@@ -111,6 +137,7 @@ function Fundraising() {
     const sections = useMemo(() => [
         { id: 'hero', label: 'Hero' },
         { id: 'crisis', label: 'The Crisis' },
+        { id: 'map', label: 'Map' },
         { id: 'gallery', label: 'Gallery' },
         { id: 'impact', label: 'Impact' },
         { id: 'goals', label: 'Goals' },
@@ -134,15 +161,14 @@ function Fundraising() {
                 observers[key] = new IntersectionObserver(
                     ([entry]) => {
                         if (entry.isIntersecting) {
-                            setVisibleGalleries(prev => new Set([...prev, key]))
+                            // Gallery is now visible
                         }
                     },
-                    { rootMargin: '300px' } // Load 300px before visible
+                    { rootMargin: '300px' }
                 )
                 observers[key].observe(galleryRefs.current[key])
             }
         })
-
         return () => {
             Object.values(observers).forEach(observer => observer.disconnect())
         }
@@ -156,7 +182,7 @@ function Fundraising() {
                     setActiveSection(entry.target.id)
                 }
             })
-        }, { rootMargin: '-20% 0px -30% 0px' }) // Negative margins to trigger when clearly in view
+        }, { rootMargin: '-20% 0px -30% 0px' })
 
         sections.forEach(({ id }) => {
             const element = document.getElementById(id)
@@ -180,19 +206,16 @@ function Fundraising() {
         }))
     }
 
-    // Parse amounts
     const parseAmount = (amount) => {
         if (!amount || amount === '') return 0
         if (typeof amount === 'number') return amount
         if (typeof amount === 'string') {
             const cleaned = amount.toString().replace(/[,"]/g, '').trim()
-            const parsed = parseInt(cleaned) || 0
-            return parsed
+            return parseInt(cleaned) || 0
         }
         return 0
     }
 
-    // Scroll to section helper
     const scrollToSection = (id) => {
         setActiveSection(id)
         const element = document.getElementById(id)
@@ -201,10 +224,7 @@ function Fundraising() {
         }
     }
 
-
-
     // Transportation Analysis
-
     const transportationAnalysis = useMemo(() => {
         if (data.length === 0) return []
         const modes = {}
@@ -215,12 +235,7 @@ function Fundraising() {
             const time = parseAmount(row['Travel Time (round-trip, minutes)']) || 0
 
             if (!modes[mode]) {
-                modes[mode] = {
-                    mode,
-                    patients: 0,
-                    totalCost: 0,
-                    totalTime: 0
-                }
+                modes[mode] = { mode, patients: 0, totalCost: 0, totalTime: 0 }
             }
             modes[mode].patients += 1
             modes[mode].totalCost += cost
@@ -232,14 +247,10 @@ function Fundraising() {
             avgCost: mode.patients > 0 ? Math.round(mode.totalCost / mode.patients) : 0,
             avgTime: mode.patients > 0 ? Math.round(mode.totalTime / mode.patients) : 0,
         })).sort((a, b) => b.patients - a.patients).slice(0, 6)
-
     }, [data])
 
-
     // Pills Distribution
-
     const pillsAnalysis = useMemo(() => {
-
         if (data.length === 0) return []
         const sources = {}
 
@@ -248,10 +259,7 @@ function Fundraising() {
             const pills = parseAmount(row['Pills Purchased']) || 0
 
             if (!sources[source]) {
-                sources[source] = {
-                    name: source,
-                    pills: 0
-                }
+                sources[source] = { name: source, pills: 0 }
             }
             sources[source].pills += pills
         })
@@ -259,26 +267,13 @@ function Fundraising() {
         return Object.values(sources).filter(s => s.pills > 0)
     }, [data])
 
-
-
-
-    const brandColors = {
-        darkTeal: '#478c7b',
-        lightTeal: '#84b9b6',
-        gold: '#c3a86b',
-        bg: '#f4f9f9'
-    }
-
-    const COLORS = [brandColors.darkTeal, brandColors.gold, brandColors.lightTeal, '#2d5e52', '#e0cfa0', '#a3d9d6']
-
-
     const collaborators = [
         {
             id: 'duke',
             name: 'Duke University',
             sub: 'School of Medicine & Global Health Institute',
             people: 'Kearsley Stewart, Charmaine Royal, Nirmish Shah, Stephanie Ibemere',
-            logo: import.meta.env.BASE_URL + 'img/duke_logo.png'
+            logo: import.meta.env.BASE_URL + 'duke_health_logos/dh_horz_blue.png'
         },
         {
             id: 'makerere',
@@ -303,39 +298,19 @@ function Fundraising() {
         }
     ]
 
-
-    const _scrollToDonate = () => {
-
-        document.getElementById('donate-section')?.scrollIntoView({ behavior: 'smooth' })
-
-    }
-
-
-
     if (loading) {
-
         return (
-
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-
                 <div className="text-center">
-
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#012169] border-t-transparent mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading...</p>
-
                 </div>
-
             </div>
-
         )
-
     }
 
     return (
-
         <div className="min-h-screen bg-white">
-
             {/* Section Navigation Dots */}
             <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 flex flex-col items-center gap-3">
                 {sections.map(({ id, label }) => (
@@ -344,9 +319,7 @@ function Fundraising() {
                         onClick={() => scrollToSection(id)}
                         className="relative group flex items-center justify-center w-10 h-10 transition-all duration-300"
                     >
-                        {/* Dot */}
-                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${activeSection === id ? 'bg-[#478c7b] scale-150' : 'bg-gray-400'}`} />
-                        {/* Tooltip */}
+                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${activeSection === id ? 'bg-[#012169] scale-150' : 'bg-gray-400'}`} />
                         <span className={`absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded transition-opacity whitespace-nowrap ${activeSection === id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                             {label}
                         </span>
@@ -355,108 +328,99 @@ function Fundraising() {
             </div>
 
             {/* Sticky Donate Button */}
-
             <button
                 onClick={() => window.open(import.meta.env.BASE_URL + 'donate', '_blank')}
-                className="fixed bottom-8 right-8 bg-[#c3a86b] hover:bg-[#b0955b] text-white px-8 py-4 rounded-full shadow-2xl z-40 font-bold text-lg transition-all duration-200 hover:scale-105 flex items-center gap-2 group"
+                className="fixed bottom-8 right-8 bg-[#4B9CD3] hover:bg-[#012169] text-white px-8 py-4 rounded-full shadow-2xl z-40 font-bold text-lg transition-all duration-200 hover:scale-105 flex items-center gap-2 group"
             >
                 <div className="bg-white/20 p-1 rounded-full group-hover:rotate-12 transition-transform">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
                 </div>
                 Donate Now
             </button>
 
-
             {/* Hero Section */}
-            {/* NEW: Spacer div to push content down. Matches header height. */}
             <div id="hero" className={`transition-all duration-500 ease-in-out ${isScrolled ? 'h-24' : 'h-[28rem]'}`}></div>
 
-            {/* NEW: Sticky Header */}
-            <header 
+            {/* Sticky Header */}
+            <header
                 className={`fixed top-0 left-0 right-0 z-30 flex flex-col justify-center transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-lg
-                ${isScrolled 
-                    ? 'bg-[#478c7b] h-20 rounded-none' 
-                    : 'bg-gradient-to-br from-[#478c7b] via-[#478c7b] to-[#2d5c51] h-[28rem] rounded-br-[80px]' 
+                ${isScrolled
+                    ? 'bg-[#012169] h-20 rounded-none'
+                    : 'h-[28rem] rounded-br-[80px]'
                 }`}
             >
-                <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between h-full">
-                    
-                    {/* LEFT SIDE: Logo & Titles */}
-                    <div className="flex items-center gap-6">
-                        {/* Logo: Scales down on scroll */}
-                        <div className={`relative transition-all duration-500 ${isScrolled ? 'w-10 h-10' : 'w-24 h-24 sm:w-32 sm:h-32'}`}>
-                           <img 
-                                src={import.meta.env.BASE_URL + "logo.svg"}
-                                alt="Sickle Cell Clinic Logo" 
-                                className="w-full h-full object-contain filter drop-shadow-md"
-                           />
-                        </div>
+                {/* Background Image with Overlay */}
+                {!isScrolled && (
+                    <div className="absolute inset-0 z-0">
+                        <img
+                            src={import.meta.env.BASE_URL + "kalangala/kalangala_1.jpg"}
+                            alt="Kalangala landscape"
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#012169]/90 via-[#012169]/85 to-[#4B9CD3]/80"></div>
+                    </div>
+                )}
+                <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between h-full relative z-10">
+                    {/* LEFT SIDE: Uganda Flag */}
+                    <div className={`flex items-center transition-all duration-500 ${isScrolled ? 'opacity-0 -translate-x-10 pointer-events-none absolute left-6' : 'opacity-100 translate-x-0'}`}>
+                        <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Flag_of_Uganda.svg"
+                            alt="Uganda"
+                            className="h-10 sm:h-14 rounded shadow-sm border border-white/10"
+                        />
+                    </div>
 
-                        {/* Titles */}
-                        <div className="flex flex-col justify-center">
-                            <h1 className={`font-bold text-white leading-none transition-all duration-500 ${isScrolled ? 'text-2xl' : 'text-4xl sm:text-6xl mb-2'}`}>
-                                Sickle Cell Clinic
-                            </h1>
-                            
-                            {/* Subtitle: Fades out on scroll */}
-                            <div className={`overflow-hidden transition-all duration-500 ${isScrolled ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`}>
-                                <p className="text-[#c3a86b] text-lg sm:text-2xl font-medium tracking-wide">
-                                    Kalangala, Uganda
-                                </p>
-                            </div>
+                    {/* CENTER: Titles */}
+                    <div className="flex flex-col justify-center items-center absolute left-1/2 transform -translate-x-1/2">
+                        <h1 className={`font-bold text-white leading-none transition-all duration-500 ${isScrolled ? 'text-2xl' : 'text-4xl sm:text-6xl mb-2'}`}>
+                            Sickle Cell Clinic
+                        </h1>
+                        <div className={`overflow-hidden transition-all duration-500 ${isScrolled ? 'max-h-0 opacity-0' : 'max-h-20 opacity-100'}`}>
+                            <p className="text-[#4B9CD3] text-lg sm:text-2xl font-medium tracking-wide">
+                                Kalangala, Uganda
+                            </p>
                         </div>
                     </div>
 
-                    {/* RIGHT SIDE: Partner Flags/Logos */}
+                    {/* RIGHT SIDE: Partner Logos */}
                     <div className={`flex items-center gap-4 sm:gap-6 transition-all duration-500 ${isScrolled ? 'opacity-0 translate-x-10 pointer-events-none absolute right-0' : 'opacity-100 translate-x-0'}`}>
-                        <div className="hidden sm:block w-px h-16 bg-white/20"></div>
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                            <img 
-                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Flag_of_Uganda.svg/320px-Flag_of_Uganda.svg.png" 
-                                alt="Uganda" 
-                                className="h-8 sm:h-12 rounded shadow-sm border border-white/10" 
-                            />
-                            <div className="flex gap-3 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                                <img src={import.meta.env.BASE_URL + "img/duke_logo.png"} alt="Duke" className="h-8 sm:h-10 object-contain" />
-                                <div className="w-px h-8 sm:h-10 bg-white/20"></div>
-                                <img src={import.meta.env.BASE_URL + "img/unc_logo.png"} alt="UNC" className="h-8 sm:h-10 object-contain" />
-                            </div>
+                        <div className="flex gap-3 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                            <img src={import.meta.env.BASE_URL + "duke_health_logos/dh_horz_white.png"} alt="Duke Health" className="h-8 sm:h-10 object-contain" />
+                            <div className="w-px h-8 sm:h-10 bg-white/20"></div>
+                            <img src={import.meta.env.BASE_URL + "img/unc_logo.png"} alt="UNC" className="h-8 sm:h-10 object-contain" />
                         </div>
                     </div>
                 </div>
             </header>
 
-
-            {/* Task 3: Floating 3-Window Section (Crisis, Sickle Cell, Fieldsite) */}
+            {/* Floating 3-Window Section (Crisis, Sickle Cell, Fieldsite) */}
             <div className="relative bg-gray-50 py-24 overflow-hidden">
-                
-
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
                         {/* Window 1: The Crisis We Face */}
-                        <div id="crisis" className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#c3a86b] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
+                        <div id="crisis" className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#4B9CD3] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-3 bg-red-50 rounded-full">
-                                    <svg className="w-8 h-8 text-[#c3a86b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-8 h-8 text-[#012169]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-800">The Crisis We Face</h3>
                             </div>
-                            
+
                             <div className="space-y-6 flex-grow">
                                 <div className="flex items-start gap-4">
-                                    <span className="text-4xl font-bold text-[#c3a86b] leading-none">80%</span>
+                                    <span className="text-4xl font-bold text-[#012169] leading-none">80%</span>
                                     <p className="text-gray-600 text-sm leading-relaxed">
                                         Mortality rate by age 5 for children born with SCD in Uganda without treatment.
                                     </p>
                                 </div>
                                 <hr className="border-gray-100" />
                                 <div className="flex items-start gap-4">
-                                    <span className="text-4xl font-bold text-[#84b9b6] leading-none">20k</span>
+                                    <span className="text-4xl font-bold text-[#4B9CD3] leading-none">20k</span>
                                     <p className="text-gray-600 text-sm leading-relaxed">
                                         Babies born with SCD annually in Uganda (4th highest globally).
                                     </p>
@@ -471,10 +435,10 @@ function Fundraising() {
                         </div>
 
                         {/* Window 2: Sickle Cell (Centerpiece) */}
-                        <div className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#478c7b] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl lg:-mt-6 lg:mb-6 relative z-20">
+                        <div className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#012169] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl lg:-mt-6 lg:mb-6 relative z-20">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="p-3 bg-emerald-50 rounded-full">
-                                    <svg className="w-8 h-8 text-[#478c7b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="p-3 bg-blue-50 rounded-full">
+                                    <svg className="w-8 h-8 text-[#012169]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                                     </svg>
                                 </div>
@@ -486,26 +450,25 @@ function Fundraising() {
                             </p>
 
                             {/* Wikipedia Preview Card */}
-                            <a 
-                                href="https://en.wikipedia.org/wiki/Sickle_cell_disease" 
-                                target="_blank" 
+                            <a
+                                href="https://en.wikipedia.org/wiki/Sickle_cell_disease"
+                                target="_blank"
                                 rel="noopener noreferrer"
                                 className="block bg-gray-50 hover:bg-blue-50 border border-gray-200 rounded-xl overflow-hidden transition-colors group/wiki"
                             >
                                 <div className="flex h-32">
                                     <div className="w-1/3 bg-gray-200">
-                                        {/* Placeholder for RBC image since we are staying lightweight */}
-                                        <img 
-                                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Sickle_cell_disease_%28SCD%29.jpg/640px-Sickle_cell_disease_%28SCD%29.jpg" 
-                                            alt="SCD Illustration" 
-                                            className="w-full h-full object-cover mix-blend-multiply"
+                                        <img
+                                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Sicklecells.jpg/640px-Sicklecells.jpg"
+                                            alt="Sickle cells under microscope"
+                                            className="w-full h-full object-cover"
                                         />
                                     </div>
                                     <div className="w-2/3 p-4 flex flex-col justify-between">
                                         <div>
-                                            <h4 className="font-serif font-bold text-gray-900 group-hover/wiki:underline decoration-[#478c7b]">Sickle cell disease</h4>
+                                            <h4 className="font-serif font-bold text-gray-900 group-hover/wiki:underline decoration-[#012169]">Sickle cell disease</h4>
                                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                A group of blood disorders typically inherited from a person's parents. The most common type is known as sickle cell anaemia.
+                                                A group of inherited blood disorders causing red blood cells to become sickle-shaped, leading to pain, anemia, and organ damage.
                                             </p>
                                         </div>
                                         <div className="flex items-center text-xs text-gray-400 mt-2">
@@ -518,10 +481,10 @@ function Fundraising() {
                         </div>
 
                         {/* Window 3: Our Unique Fieldsite */}
-                        <div className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#84b9b6] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
+                        <div className="group bg-white rounded-3xl p-8 shadow-xl border-t-4 border-[#4B9CD3] transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl h-full flex flex-col">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="p-3 bg-blue-50 rounded-full">
-                                    <svg className="w-8 h-8 text-[#84b9b6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-8 h-8 text-[#4B9CD3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
@@ -530,29 +493,38 @@ function Fundraising() {
 
                             <div className="mb-6 space-y-3">
                                 <div className="flex items-start text-sm text-gray-600">
-                                    <span className="font-bold text-[#478c7b] w-24 flex-shrink-0">Location:</span>
+                                    <span className="font-bold text-[#012169] w-24 flex-shrink-0">Location:</span>
                                     <span>Kalangala District (84 Islands)</span>
                                 </div>
                                 <div className="flex items-start text-sm text-gray-600">
-                                    <span className="font-bold text-[#478c7b] w-24 flex-shrink-0">Challenge:</span>
+                                    <span className="font-bold text-[#012169] w-24 flex-shrink-0">Challenge:</span>
                                     <span>Highest HIV rates & Water transport barriers</span>
                                 </div>
                                 <div className="flex items-start text-sm text-gray-600">
-                                    <span className="font-bold text-[#478c7b] w-24 flex-shrink-0">Status:</span>
+                                    <span className="font-bold text-[#012169] w-24 flex-shrink-0">Status:</span>
                                     <span>"Hard to Reach" & "Hard to Stay"</span>
                                 </div>
                             </div>
 
+                            {/* Kalangala Image */}
+                            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-32 relative mb-4">
+                                <img
+                                    src={import.meta.env.BASE_URL + "kalangala/kalangala_2.jpg"}
+                                    alt="Kalangala landscape"
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                                />
+                            </div>
+
                             {/* Integrated Map - Kalangala */}
-                            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-48 relative">
-                                <iframe 
-                                    width="100%" 
-                                    height="100%" 
-                                    frameBorder="0" 
-                                    scrolling="no" 
-                                    marginHeight="0" 
-                                    marginWidth="0" 
-                                    src="https://www.openstreetmap.org/export/embed.html?bbox=32.08389282226563%2C-0.5186082464735168%2C32.41760253906251%2C-0.2073685419028911&amp;layer=mapnik" 
+                            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-inner h-40 relative">
+                                <iframe
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    scrolling="no"
+                                    marginHeight="0"
+                                    marginWidth="0"
+                                    src="https://www.openstreetmap.org/export/embed.html?bbox=32.08389282226563%2C-0.5186082464735168%2C32.41760253906251%2C-0.2073685419028911&layer=mapnik"
                                     style={{ border: 0 }}
                                     title="Kalangala Map"
                                     className="grayscale hover:grayscale-0 transition-all duration-700"
@@ -567,23 +539,64 @@ function Fundraising() {
                 </div>
             </div>
 
-            {/* Task 4: Interactive Gallery Selector */}
-            <div id="gallery" className="py-24 bg-white relative overflow-hidden">
-                
-                <div className="max-w-5xl mx-auto px-4 relative z-10">
+            {/* Interactive Map Section */}
+            <div id="map" className="py-20 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+                <div className="max-w-6xl mx-auto px-4">
+                    <div className="text-center mb-10">
+                        <span className="inline-block py-1 px-3 rounded-full text-xs font-bold tracking-wider uppercase mb-2"
+                            style={{ backgroundColor: `${BRAND_COLORS.carolinaBlue}20`, color: BRAND_COLORS.dukeBlue }}>
+                            Interactive Visualization
+                        </span>
+                        <h2 className="text-4xl font-serif font-bold" style={{ color: BRAND_COLORS.dukeBlue }}>
+                            Patient Distribution Map
+                        </h2>
+                        <p className="text-gray-600 mt-2 max-w-2xl mx-auto">
+                            Explore the geographic distribution of sickle cell patients across the Kalangala district islands.
+                        </p>
+                    </div>
 
-                    {/* 1. Header & Dropdown Selector */}
+                    <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
+                        <div className='tableauPlaceholder' id='viz1772666220077' style={{ position: 'relative', width: '100%' }}>
+                            <noscript>
+                                <a href='#'>
+                                    <img alt='Heat Map' src='https://public.tableau.com/static/images/Cl/ClinicMap_17715454893810/HeatMap/1_rss.png' style={{ border: 'none' }} />
+                                </a>
+                            </noscript>
+                            <object className='tableauViz' style={{ display: 'none' }}>
+                                <param name='host_url' value='https%3A%2F%2Fpublic.tableau.com%2F' />
+                                <param name='embed_code_version' value='3' />
+                                <param name='site_root' value='' />
+                                <param name='name' value='ClinicMap_17715454893810/HeatMap' />
+                                <param name='tabs' value='no' />
+                                <param name='toolbar' value='yes' />
+                                <param name='static_image' value='https://public.tableau.com/static/images/Cl/ClinicMap_17715454893810/HeatMap/1.png' />
+                                <param name='animate_transition' value='yes' />
+                                <param name='display_static_image' value='yes' />
+                                <param name='display_spinner' value='yes' />
+                                <param name='display_overlay' value='yes' />
+                                <param name='display_count' value='yes' />
+                                <param name='language' value='en-US' />
+                            </object>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Interactive Gallery Selector */}
+            <div id="gallery" className="py-24 bg-white relative overflow-hidden">
+                <div className="max-w-5xl mx-auto px-4 relative z-10">
+                    {/* Header & Dropdown Selector */}
                     <div className="flex justify-center mb-8 relative">
                         <div className="relative inline-block text-left z-30">
-                            <div 
+                            <div
                                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                className="cursor-pointer bg-white border-2 border-[#84b9b6] px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-4 group"
+                                className="cursor-pointer bg-white border-2 border-[#4B9CD3] px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-4 group"
                             >
-                                <h3 className="text-2xl font-bold text-[#478c7b] min-w-[200px] text-center select-none">
+                                <h3 className="text-2xl font-bold text-[#012169] min-w-[200px] text-center select-none">
                                     {galleries[activeGalleryKey]?.title}
                                 </h3>
-                                <div className="bg-[#f4f9f9] p-2 rounded-lg group-hover:bg-[#e0efff] transition-colors">
-                                    <svg className="w-6 h-6 text-[#478c7b]" fill="currentColor" viewBox="0 0 24 24">
+                                <div className="bg-[#f8fafc] p-2 rounded-lg group-hover:bg-[#dbeafe] transition-colors">
+                                    <svg className="w-6 h-6 text-[#012169]" fill="currentColor" viewBox="0 0 24 24">
                                         <circle cx="5" cy="12" r="2" />
                                         <circle cx="12" cy="12" r="2" />
                                         <circle cx="19" cy="12" r="2" />
@@ -601,8 +614,8 @@ function Fundraising() {
                                                 setActiveGalleryKey(key);
                                                 setIsDropdownOpen(false);
                                             }}
-                                            className={`w-full text-left px-6 py-4 hover:bg-[#f4f9f9] transition-colors border-b border-gray-50 last:border-0
-                                                ${activeGalleryKey === key ? 'text-[#c3a86b] font-bold bg-[#fcfbf7]' : 'text-gray-600'}`}
+                                            className={`w-full text-left px-6 py-4 hover:bg-[#f8fafc] transition-colors border-b border-gray-50 last:border-0
+                                                ${activeGalleryKey === key ? 'text-[#4B9CD3] font-bold bg-[#f0f7ff]' : 'text-gray-600'}`}
                                         >
                                             {gallery.title}
                                         </button>
@@ -612,13 +625,12 @@ function Fundraising() {
                         </div>
                     </div>
 
-                    {/* 2. Image Viewer Area */}
+                    {/* Image Viewer Area */}
                     <div className="flex items-center justify-center gap-4 md:gap-12">
-                        
-                        {/* Left Arrow (Outside) */}
-                        <button 
+                        {/* Left Arrow */}
+                        <button
                             onClick={() => prevImage(activeGalleryKey)}
-                            className="p-4 rounded-full text-[#478c7b] hover:bg-[#f4f9f9] hover:scale-110 transition-all focus:outline-none"
+                            className="p-4 rounded-full text-[#012169] hover:bg-[#f8fafc] hover:scale-110 transition-all focus:outline-none"
                         >
                             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 19l-7-7 7-7" />
@@ -627,11 +639,10 @@ function Fundraising() {
 
                         {/* Main Frame */}
                         <div className="relative w-full max-w-3xl aspect-[4/3] md:aspect-video bg-gray-50 rounded-3xl overflow-hidden shadow-2xl border-4 border-white ring-1 ring-gray-100 group">
-                            
-                            {/* Smart Background: Blurs the current image to fill empty space */}
+                            {/* Smart Background */}
                             <div className="absolute inset-0 z-0">
                                 {galleries[activeGalleryKey]?.images[currentCarousel[activeGalleryKey] || 0] && (
-                                    <img 
+                                    <img
                                         src={galleries[activeGalleryKey].images[currentCarousel[activeGalleryKey] || 0]}
                                         className="w-full h-full object-cover blur-2xl opacity-40 scale-110"
                                         alt="background blur"
@@ -648,38 +659,33 @@ function Fundraising() {
                                 />
                             </div>
 
-                            {/* Counter Pill (Bottom Right inside frame) */}
-                            <div className="absolute bottom-4 right-4 z-20 bg-white/80 backdrop-blur-md px-4 py-1 rounded-full text-sm font-bold text-[#478c7b] border border-white/50 shadow-sm">
+                            {/* Counter Pill */}
+                            <div className="absolute bottom-4 right-4 z-20 bg-white/80 backdrop-blur-md px-4 py-1 rounded-full text-sm font-bold text-[#012169] border border-white/50 shadow-sm">
                                 {(currentCarousel[activeGalleryKey] || 0) + 1} / {galleries[activeGalleryKey]?.images.length}
                             </div>
                         </div>
 
-                        {/* Right Arrow (Outside) */}
-                        <button 
+                        {/* Right Arrow */}
+                        <button
                             onClick={() => nextImage(activeGalleryKey)}
-                            className="p-4 rounded-full text-[#478c7b] hover:bg-[#f4f9f9] hover:scale-110 transition-all focus:outline-none"
+                            className="p-4 rounded-full text-[#012169] hover:bg-[#f8fafc] hover:scale-110 transition-all focus:outline-none"
                         >
                             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5l7 7-7 7" />
                             </svg>
                         </button>
                     </div>
-
                 </div>
             </div>
 
-
-
-
-            {/* Task 5: Combined Impact & Collaborators Section */}
-            
-            <div id="impact" className="py-20 relative overflow-hidden" style={{ backgroundColor: brandColors.bg }}>
+            {/* Combined Impact & Collaborators Section */}
+            <div id="impact" className="py-20 relative overflow-hidden" style={{ backgroundColor: BRAND_COLORS.bg }}>
                 {/* Decorative Background Elements */}
                 <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-5">
-                    <svg className="absolute -left-20 top-20 w-96 h-96 text-[#478c7b]" fill="currentColor" viewBox="0 0 200 200">
+                    <svg className="absolute -left-20 top-20 w-96 h-96 text-[#012169]" fill="currentColor" viewBox="0 0 200 200">
                         <path d="M45.7,18.8c-9.8,5.1-18.2,14.6-21.6,25.8S26.6,71,36,80.5c6.3,6.3,14.5,10.2,23.1,11.5c1.4,0.2,2.8,0.3,4.2,0.3 c13.6,0,26.4-5.3,36-14.9c19.9-19.9,19.9-52.1,0-72C80.5-13.6,48.3-13.6,28.4,6.3C34.8,9.7,40.7,13.8,45.7,18.8z" />
                     </svg>
-                    <div className="absolute right-0 bottom-0 w-64 h-64 rounded-full border-4 border-[#84b9b6] translate-x-1/2 translate-y-1/2"></div>
+                    <div className="absolute right-0 bottom-0 w-64 h-64 rounded-full border-4 border-[#4B9CD3] translate-x-1/2 translate-y-1/2"></div>
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
@@ -688,46 +694,46 @@ function Fundraising() {
                         {/* LEFT COLUMN: Impact by the Numbers */}
                         <div className="lg:col-span-5 space-y-8">
                             <div className="text-left mb-8">
-                                <span className="inline-block py-1 px-3 rounded-full text-xs font-bold tracking-wider uppercase mb-2" 
-                                      style={{ backgroundColor: `${brandColors.lightTeal}20`, color: brandColors.darkTeal }}>
+                                <span className="inline-block py-1 px-3 rounded-full text-xs font-bold tracking-wider uppercase mb-2"
+                                    style={{ backgroundColor: `${BRAND_COLORS.carolinaBlue}20`, color: BRAND_COLORS.dukeBlue }}>
                                     Data Analysis
                                 </span>
-                                <h2 className="text-4xl font-serif font-bold" style={{ color: brandColors.darkTeal }}>
+                                <h2 className="text-4xl font-serif font-bold" style={{ color: BRAND_COLORS.dukeBlue }}>
                                     Impact by the Numbers
                                 </h2>
                             </div>
 
                             {/* Chart 1: Transportation */}
-                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-[#84b9b6]/30 hover:shadow-md transition-shadow duration-300">
-                                <h3 className="text-lg font-bold mb-2 flex items-center" style={{ color: brandColors.darkTeal }}>
-                                    <span className="w-2 h-8 rounded-full mr-3" style={{ backgroundColor: brandColors.gold }}></span>
+                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-[#4B9CD3]/30 hover:shadow-md transition-shadow duration-300">
+                                <h3 className="text-lg font-bold mb-2 flex items-center" style={{ color: BRAND_COLORS.dukeBlue }}>
+                                    <span className="w-2 h-8 rounded-full mr-3" style={{ backgroundColor: BRAND_COLORS.carolinaBlue }}></span>
                                     Transportation Barriers
                                 </h3>
                                 <p className="text-sm text-gray-500 mb-6 pl-5">Average cost and time to reach the clinic.</p>
-                                
+
                                 <div className="h-64 w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={transportationAnalysis} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                            <XAxis 
-                                                dataKey="mode" 
-                                                axisLine={false} 
-                                                tickLine={false} 
+                                            <XAxis
+                                                dataKey="mode"
+                                                axisLine={false}
+                                                tickLine={false}
                                                 tick={{ fill: '#6b7280', fontSize: 10 }}
                                                 dy={10}
                                             />
-                                            <YAxis 
-                                                axisLine={false} 
-                                                tickLine={false} 
+                                            <YAxis
+                                                axisLine={false}
+                                                tickLine={false}
                                                 tick={{ fill: '#6b7280', fontSize: 10 }}
                                             />
-                                            <Tooltip 
-                                                cursor={{ fill: `${brandColors.lightTeal}10` }}
-                                                contentStyle={{ borderRadius: '12px', border: `1px solid ${brandColors.lightTeal}`, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            <Tooltip
+                                                cursor={{ fill: `${BRAND_COLORS.carolinaBlue}10` }}
+                                                contentStyle={{ borderRadius: '12px', border: `1px solid ${BRAND_COLORS.carolinaBlue}`, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                             />
                                             <Bar dataKey="patients" radius={[4, 4, 0, 0]}>
                                                 {transportationAnalysis.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? brandColors.darkTeal : brandColors.lightTeal} />
+                                                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? BRAND_COLORS.dukeBlue : BRAND_COLORS.carolinaBlue} />
                                                 ))}
                                             </Bar>
                                         </BarChart>
@@ -736,13 +742,13 @@ function Fundraising() {
                             </div>
 
                             {/* Chart 2: Pills */}
-                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-[#84b9b6]/30 hover:shadow-md transition-shadow duration-300">
-                                <h3 className="text-lg font-bold mb-2 flex items-center" style={{ color: brandColors.darkTeal }}>
-                                    <span className="w-2 h-8 rounded-full mr-3" style={{ backgroundColor: brandColors.lightTeal }}></span>
+                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-[#4B9CD3]/30 hover:shadow-md transition-shadow duration-300">
+                                <h3 className="text-lg font-bold mb-2 flex items-center" style={{ color: BRAND_COLORS.dukeBlue }}>
+                                    <span className="w-2 h-8 rounded-full mr-3" style={{ backgroundColor: BRAND_COLORS.dukeBlue }}></span>
                                     Medication Sources
                                 </h3>
                                 <p className="text-sm text-gray-500 mb-6 pl-5">Distribution of Hydroxyurea purchases.</p>
-                                
+
                                 <div className="h-64 w-full flex items-center justify-center">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
@@ -757,15 +763,15 @@ function Fundraising() {
                                                 paddingAngle={5}
                                             >
                                                 {pillsAnalysis.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip 
-                                                contentStyle={{ borderRadius: '12px', border: `1px solid ${brandColors.lightTeal}` }}
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '12px', border: `1px solid ${BRAND_COLORS.carolinaBlue}` }}
                                             />
-                                            <Legend 
-                                                verticalAlign="bottom" 
-                                                height={36} 
+                                            <Legend
+                                                verticalAlign="bottom"
+                                                height={36}
                                                 iconType="circle"
                                                 formatter={(value) => <span className="text-xs text-gray-600 ml-1">{value}</span>}
                                             />
@@ -777,59 +783,57 @@ function Fundraising() {
 
                         {/* RIGHT COLUMN: Collaborators */}
                         <div className="lg:col-span-7 mt-12 lg:mt-0">
-                             <div className="text-right mb-12">
-                                <span className="inline-block py-1 px-3 rounded-full text-xs font-bold tracking-wider uppercase mb-2" 
-                                      style={{ backgroundColor: `${brandColors.gold}30`, color: '#8c7335' }}>
+                            <div className="text-right mb-12">
+                                <span className="inline-block py-1 px-3 rounded-full text-xs font-bold tracking-wider uppercase mb-2"
+                                    style={{ backgroundColor: `${BRAND_COLORS.gold}30`, color: '#8c7335' }}>
                                     Partnership
                                 </span>
-                                <h2 className="text-4xl font-serif font-bold" style={{ color: brandColors.darkTeal }}>
+                                <h2 className="text-4xl font-serif font-bold" style={{ color: BRAND_COLORS.dukeBlue }}>
                                     Research Collaborators
                                 </h2>
                             </div>
 
                             <div className="space-y-6 relative">
-                                {/* Central connecting line (only visible on desktop) */}
+                                {/* Central connecting line */}
                                 <div className="absolute left-1/2 top-4 bottom-4 w-px bg-gray-200 hidden md:block -translate-x-1/2"></div>
 
                                 {collaborators.map((collab, index) => {
-                                    const isEven = index % 2 === 0;
-                                    
+                                    const isEven = index % 2 === 0
+
                                     return (
                                         <div key={collab.id} className={`flex flex-col md:flex-row items-center gap-6 md:gap-12 relative group`}>
-                                            
                                             {/* Connector Dot */}
-                                            <div className="hidden md:block absolute left-1/2 top-1/2 w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 -translate-x-1/2 -translate-y-1/2 transition-colors duration-300 group-hover:bg-[#c3a86b]" style={{ backgroundColor: brandColors.lightTeal }}></div>
+                                            <div className="hidden md:block absolute left-1/2 top-1/2 w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 -translate-x-1/2 -translate-y-1/2 transition-colors duration-300 group-hover:bg-[#4B9CD3]" style={{ backgroundColor: BRAND_COLORS.carolinaBlue }}></div>
 
-                                            {/* Left Side (Text if Even, Logo if Odd) */}
+                                            {/* Left Side */}
                                             <div className={`flex-1 w-full md:w-auto ${isEven ? 'text-center md:text-right order-2 md:order-1' : 'order-1 md:order-2 flex justify-center md:justify-start'}`}>
                                                 {isEven ? (
-                                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-transparent group-hover:border-[#84b9b6] transition-all duration-300">
-                                                        <h3 className="text-xl font-bold mb-1" style={{ color: brandColors.darkTeal }}>{collab.name}</h3>
-                                                        <p className="text-sm font-semibold mb-2" style={{ color: brandColors.gold }}>{collab.sub}</p>
+                                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-transparent group-hover:border-[#4B9CD3] transition-all duration-300">
+                                                        <h3 className="text-xl font-bold mb-1" style={{ color: BRAND_COLORS.dukeBlue }}>{collab.name}</h3>
+                                                        <p className="text-sm font-semibold mb-2" style={{ color: BRAND_COLORS.carolinaBlue }}>{collab.sub}</p>
                                                         <p className="text-sm text-gray-600 leading-relaxed">{collab.people}</p>
                                                     </div>
                                                 ) : (
-                                                    <div className="w-32 h-32 p-4 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#f0f7f6] group-hover:scale-110 transition-transform duration-300">
+                                                    <div className="w-32 h-32 p-4 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#f0f7ff] group-hover:scale-110 transition-transform duration-300">
                                                         <img src={collab.logo} alt={collab.name} className="max-w-full max-h-full object-contain" />
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Right Side (Logo if Even, Text if Odd) */}
+                                            {/* Right Side */}
                                             <div className={`flex-1 w-full md:w-auto ${isEven ? 'order-1 md:order-2 flex justify-center md:justify-start' : 'text-center md:text-left order-2 md:order-1'}`}>
                                                 {isEven ? (
-                                                     <div className="w-32 h-32 p-4 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#f0f7f6] group-hover:scale-110 transition-transform duration-300">
+                                                    <div className="w-32 h-32 p-4 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-[#f0f7ff] group-hover:scale-110 transition-transform duration-300">
                                                         <img src={collab.logo} alt={collab.name} className="max-w-full max-h-full object-contain" />
                                                     </div>
                                                 ) : (
-                                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-transparent group-hover:border-[#84b9b6] transition-all duration-300">
-                                                        <h3 className="text-xl font-bold mb-1" style={{ color: brandColors.darkTeal }}>{collab.name}</h3>
-                                                        <p className="text-sm font-semibold mb-2" style={{ color: brandColors.gold }}>{collab.sub}</p>
+                                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-transparent group-hover:border-[#4B9CD3] transition-all duration-300">
+                                                        <h3 className="text-xl font-bold mb-1" style={{ color: BRAND_COLORS.dukeBlue }}>{collab.name}</h3>
+                                                        <p className="text-sm font-semibold mb-2" style={{ color: BRAND_COLORS.carolinaBlue }}>{collab.sub}</p>
                                                         <p className="text-sm text-gray-600 leading-relaxed">{collab.people}</p>
                                                     </div>
                                                 )}
                                             </div>
-
                                         </div>
                                     )
                                 })}
@@ -839,422 +843,185 @@ function Fundraising() {
                 </div>
             </div>
 
-
             {/* Project Goals */}
-
-            <div id="goals" className="bg-gradient-to-br from-blue-900 to-emerald-900 text-white py-16">
-
+            <div id="goals" className="bg-gradient-to-br from-[#012169] to-[#4B9CD3] text-white py-16">
                 <div className="max-w-6xl mx-auto px-4">
-
                     <h2 className="text-4xl font-bold mb-8 text-center">Project Goals 2025-2030</h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Expand Laboratory Testing
-
-                            </h3>
-
-                            <p className="text-blue-100">Enhance laboratory testing capability and staff skills for better diagnostics</p>
-
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Increase Patient Access
-
-                            </h3>
-
-                            <p className="text-blue-100">Expand patient access to clinical services across the islands</p>
-
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Develop m-Health Program
-
-                            </h3>
-
-                            <p className="text-blue-100">Phone-based and digital outreach clinical services for remote patients</p>
-
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Scale Newborn Screening
-
-                            </h3>
-
-                            <p className="text-blue-100">Increase screening at clinic and in communities for home births</p>
-
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Train Healthcare Workers
-
-                            </h3>
-
-                            <p className="text-blue-100">Prenatal SCD education and counseling strategies to support families</p>
-
-                        </div>
-
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
-                            <h3 className="text-xl font-bold mb-3 flex items-center">
-
-                                <svg className="w-6 h-6 mr-2 text-emerald-300" fill="currentColor" viewBox="0 0 20 20">
-
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-
-                                </svg>
-
-                                Support Women with SCD
-
-                            </h3>
-
-                            <p className="text-blue-100">SCD-specific counseling, healthcare support, and economic opportunities</p>
-
-                        </div>
-
+                        {[
+                            { title: 'Expand Laboratory Testing', desc: 'Enhance laboratory testing capability and staff skills for better diagnostics' },
+                            { title: 'Increase Patient Access', desc: 'Expand patient access to clinical services across the islands' },
+                            { title: 'Develop m-Health Program', desc: 'Phone-based and digital outreach clinical services for remote patients' },
+                            { title: 'Scale Newborn Screening', desc: 'Increase screening at clinic and in communities for home births' },
+                            { title: 'Train Healthcare Workers', desc: 'Prenatal SCD education and counseling strategies to support families' },
+                            { title: 'Support Women with SCD', desc: 'SCD-specific counseling, healthcare support, and economic opportunities' }
+                        ].map((goal, index) => (
+                            <div key={index} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                                <h3 className="text-xl font-bold mb-3 flex items-center">
+                                    <svg className="w-6 h-6 mr-2 text-[#4B9CD3]" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    {goal.title}
+                                </h3>
+                                <p className="text-blue-100">{goal.desc}</p>
+                            </div>
+                        ))}
                     </div>
-
                 </div>
-
             </div>
 
-
             {/* Urgent Fundraising Goals */}
-
             <div className="bg-gradient-to-br from-red-600 to-orange-600 text-white py-16">
-
                 <div className="max-w-6xl mx-auto px-4">
-
                     <div className="text-center mb-8">
-
                         <span className="inline-block bg-white text-red-600 px-4 py-2 rounded-full font-bold text-sm mb-4">URGENT</span>
-
                         <h2 className="text-4xl font-bold mb-4">Immediate Funding Needed</h2>
-
                         <p className="text-xl text-red-100">Research funds for hydroxyurea end March 15, 2025</p>
-
                     </div>
 
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20 text-center">
-
                             <h3 className="text-5xl font-bold mb-2">$125</h3>
-
                             <p className="text-lg mb-2">One Week of Treatment</p>
-
                             <p className="text-sm text-red-100">Supplies hydroxyurea for all current patients for one week</p>
-
                         </div>
 
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20 text-center">
-
                             <h3 className="text-5xl font-bold mb-2">$500</h3>
-
                             <p className="text-lg mb-2">One Month of Treatment</p>
-
                             <p className="text-sm text-red-100">Supplies hydroxyurea for all current patients for one month</p>
-
                         </div>
 
                         <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/40 text-center">
-
                             <h3 className="text-5xl font-bold mb-2">$9,630</h3>
-
                             <p className="text-lg mb-2">Full Year of Treatment</p>
-
                             <p className="text-sm text-red-100">Covers all patients for 2025, including new enrollments</p>
-
                         </div>
-
                     </div>
-
-
 
                     <div className="mt-8 bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-
                         <h3 className="text-2xl font-bold mb-3">Why Hydroxyurea Matters</h3>
-
                         <p className="text-lg text-red-100">
-
                             Hydroxyurea is a <strong>life-saving medication</strong> for sickle cell patients. It reduces painful crises, prevents organ damage, and dramatically improves survival rates. Since 2022, Duke-sponsored research has covered the cost for 90 patients. Without continued support, these patients will lose access to this essential treatment.
-
                         </p>
-
                     </div>
-
                 </div>
-
             </div>
-
-
 
             {/* Long-term Fundraising Goals */}
-
             <div className="bg-white py-16">
-
                 <div className="max-w-6xl mx-auto px-4">
-
                     <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center">Long-term Investment Goals</h2>
 
-
                     <div className="space-y-6">
-
-                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-8 border-2 border-blue-300">
-
+                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-8 border-2 border-[#4B9CD3]">
                             <div className="flex items-center justify-between flex-wrap gap-4">
-
                                 <div>
-
-                                    <h3 className="text-2xl font-bold text-blue-900 mb-2">Research: Liver & Kidney Function Study</h3>
-
+                                    <h3 className="text-2xl font-bold text-[#012169] mb-2">Research: Liver & Kidney Function Study</h3>
                                     <p className="text-gray-700">Fund a Duke-KHCIV lab study of patient liver and kidney function for two years, improving long-term health outcomes</p>
-
                                 </div>
-
                                 <div className="text-right">
-
-                                    <p className="text-4xl font-bold text-blue-600">$12,000</p>
-
+                                    <p className="text-4xl font-bold text-[#012169]">$12,000</p>
                                     <p className="text-sm text-gray-600">2-year study</p>
-
                                 </div>
-
                             </div>
-
                         </div>
 
-
-
-                        <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-8 border-2 border-emerald-300">
-
+                        <div className="bg-gradient-to-r from-[#dbeafe] to-[#bfdbfe] rounded-xl p-8 border-2 border-[#4B9CD3]">
                             <div className="flex items-center justify-between flex-wrap gap-4">
-
                                 <div>
-
-                                    <h3 className="text-2xl font-bold text-emerald-900 mb-2">Temporary Clinic Space</h3>
-
+                                    <h3 className="text-2xl font-bold text-[#012169] mb-2">Temporary Clinic Space</h3>
                                     <p className="text-gray-700">Build a 2-room tent dedicated to a waiting room and treatment room for sickle cell patients</p>
-
                                     <p className="text-sm text-gray-600 mt-2">Currently the clinic meets every Tuesday in the Ophthalmology clinic</p>
-
                                 </div>
-
                                 <div className="text-right">
-
-                                    <p className="text-4xl font-bold text-emerald-600">$5,000</p>
-
+                                    <p className="text-4xl font-bold text-[#012169]">$5,000</p>
                                     <p className="text-sm text-gray-600">Dedicated space</p>
-
                                 </div>
-
                             </div>
-
                         </div>
 
-
-
-                        <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-8 border-2 border-purple-300">
-
+                        <div className="bg-gradient-to-r from-[#012169] to-[#1e3a5f] rounded-xl p-8 border-2 border-[#012169] text-white">
                             <div className="flex items-center justify-between flex-wrap gap-4">
-
                                 <div>
-
-                                    <h3 className="text-2xl font-bold text-purple-900 mb-2">Permanent Sickle Cell Clinic Building</h3>
-
-                                    <p className="text-gray-700">Build the foundation for a new sickle cell clinic building at KHCIV</p>
-
-                                    <p className="text-sm text-gray-600 mt-2">Land has already been allocated by the health center</p>
-
+                                    <h3 className="text-2xl font-bold mb-2">Permanent Sickle Cell Clinic Building</h3>
+                                    <p className="text-blue-100">Build the foundation for a new sickle cell clinic building at KHCIV</p>
+                                    <p className="text-sm text-blue-200 mt-2">Land has already been allocated by the health center</p>
                                 </div>
-
                                 <div className="text-right">
-
-                                    <p className="text-4xl font-bold text-purple-600">$20,000</p>
-
-                                    <p className="text-sm text-gray-600">Foundation</p>
-
+                                    <p className="text-4xl font-bold">$20,000</p>
+                                    <p className="text-sm text-blue-200">Foundation</p>
                                 </div>
-
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             {/* Media & Resources */}
-
             <div id="resources" className="bg-gray-100 py-16">
-
                 <div className="max-w-6xl mx-auto px-4">
-
                     <h2 className="text-4xl font-bold text-gray-900 mb-8 text-center">Media & Resources</h2>
 
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
                         <div className="bg-white rounded-lg shadow-lg p-6">
-
                             <h3 className="text-xl font-bold text-gray-900 mb-4">Featured Media</h3>
-
                             <ul className="space-y-3">
-
                                 <li>
-
-                                    <a href="https://www.newvision.co.ug/category/health/kalangala-worried-about-increasing-sickle-cel-NV_175593" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://www.newvision.co.ug/category/health/kalangala-worried-about-increasing-sickle-cel-NV_175593" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         Uganda's leading newspaper, New Vision, Nov 2023
-
                                     </a>
-
                                 </li>
-
                                 <li>
-
-                                    <a href="https://www.youtube.com/watch?v=DqatLgSEUUw&t=2s" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://www.youtube.com/watch?v=DqatLgSEUUw&t=2s" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         23-minute VIDEO about our sickle cell clinic in Kalangala, Uganda
-
                                     </a>
-
                                 </li>
-
                             </ul>
-
                         </div>
-
-
 
                         <div className="bg-white rounded-lg shadow-lg p-6">
-
                             <h3 className="text-xl font-bold text-gray-900 mb-4">Social Media</h3>
-
                             <ul className="space-y-3">
-
                                 <li>
-
-                                    <a href="https://www.instagram.com/kunihirascorg/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://www.instagram.com/kunihirascorg/" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         Kunihira NGO Instagram
-
                                     </a>
-
                                 </li>
-
                                 <li>
-
-                                    <a href="https://x.com/KunihiraSCO" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://x.com/KunihiraSCO" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         Kunihira NGO X (Twitter)
-
                                     </a>
-
                                 </li>
-
                                 <li>
-
-                                    <a href="https://kuhsco.org/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://kuhsco.org/" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         Kunihira webpage (under construction)
-
                                     </a>
-
                                 </li>
-
                                 <li>
-
-                                    <a href="https://www.youtube.com/@joel1983" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-
+                                    <a href="https://www.youtube.com/@joel1983" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">
                                         YouTube: "My Health Talks" by Joel Kibonwabake
-
                                     </a>
-
                                 </li>
-
                             </ul>
-
                         </div>
-
                     </div>
 
-
-
                     <div className="bg-white rounded-lg shadow-lg p-6">
-
                         <h3 className="text-xl font-bold text-gray-900 mb-4">Duke Global Health Institute - News</h3>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                             <ul className="space-y-2 text-sm">
-
-                                <li><a href="https://globalhealth.duke.edu/news/students-prepare-display-research-skills-showcase" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2024: Maddie Kitts - Scaling up newborn screening</a></li>
-
-                                <li><a href="https://globalhealth.duke.edu/news/uganda-road-treating-sickle-cell-disease-sometimes-isnt-road" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2024: Daniel Lee - Traveling by water to reach patients</a></li>
-
-                                <li><a href="https://globalhealth.duke.edu/news/dance-global-health-message" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2022: Music, dance and drama collaboration</a></li>
-
-                                <li><a href="https://globalhealth.duke.edu/news/notes-field-how-we-travel" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2022: MSGH and undergraduate research fieldwork</a></li>
-
+                                <li><a href="https://globalhealth.duke.edu/news/students-prepare-display-research-skills-showcase" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2024: Maddie Kitts - Scaling up newborn screening</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/uganda-road-treating-sickle-cell-disease-sometimes-isnt-road" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2024: Daniel Lee - Traveling by water to reach patients</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/dance-global-health-message" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2022: Music, dance and drama collaboration</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/notes-field-how-we-travel" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2022: MSGH and undergraduate research fieldwork</a></li>
                             </ul>
 
                             <ul className="space-y-2 text-sm">
-
-                                <li><a href="https://globalhealth.duke.edu/news/no-field-no-problem" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2021: Dorothy Nam - Thesis research during Covid</a></li>
-
-                                <li><a href="https://globalhealth.duke.edu/news/bringing-sickle-cell-awareness-small-island" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2021: Undergraduate research team during Covid</a></li>
-                                <li><a href="https://globalhealth.duke.edu/news/big-challenge-comes-small-island" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2020: COVID-19 quarantine by Joel Kibonwabake</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/no-field-no-problem" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2021: Dorothy Nam - Thesis research during Covid</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/bringing-sickle-cell-awareness-small-island" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2021: Undergraduate research team during Covid</a></li>
+                                <li><a href="https://globalhealth.duke.edu/news/big-challenge-comes-small-island" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2020: COVID-19 quarantine by Joel Kibonwabake</a></li>
                             </ul>
                         </div>
                     </div>
@@ -1263,16 +1030,16 @@ function Fundraising() {
                         <h3 className="text-xl font-bold text-gray-900 mb-4">Conference Presentations & Posters</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <ul className="space-y-2">
-                                <li><a href="https://globalhealth.duke.edu/student-showcases/multilevel-analysis-barriers-hydroxyurea-effectiveness-and-recurrent-vaso" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2025: Julius Muchangi - Barriers to Hydroxyurea Effectiveness</a></li>
-                                <li><a href="https://duke.box.com/s/xaavyzqnb7mltfhej4ehoq61fxbo7s7n" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2025: Nigeria - Rapid SCD testing at Global Congress</a></li>
-                                <li><a href="https://duke.box.com/s/jmphej63zgup35kdphtgdrentz7i43kd" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2025: Daniel Lee - Hydroxyurea Adherence</a></li>
-                                <li><a href="https://duke.box.com/s/96t365aes2bfu0rbrc02xgev1n4rbgjd" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2025: Maddie Kitts - Scale-up SCD Newborn Screening</a></li>
+                                <li><a href="https://globalhealth.duke.edu/student-showcases/multilevel-analysis-barriers-hydroxyurea-effectiveness-and-recurrent-vaso" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2025: Julius Muchangi - Barriers to Hydroxyurea Effectiveness</a></li>
+                                <li><a href="https://duke.box.com/s/xaavyzqnb7mltfhej4ehoq61fxbo7s7n" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2025: Nigeria - Rapid SCD testing at Global Congress</a></li>
+                                <li><a href="https://duke.box.com/s/jmphej63zgup35kdphtgdrentz7i43kd" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2025: Daniel Lee - Hydroxyurea Adherence</a></li>
+                                <li><a href="https://duke.box.com/s/96t365aes2bfu0rbrc02xgev1n4rbgjd" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2025: Maddie Kitts - Scale-up SCD Newborn Screening</a></li>
                             </ul>
                             <ul className="space-y-2">
-                                <li><a href="https://globalhealth.duke.edu/student-showcases/creating-accessible-educational-tools-increase-community-awareness-sickle-cell" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2022: Bailey Griffen - Educational Tools</a></li>
-                                <li><a href="https://globalhealth.duke.edu/student-showcases/assessing-arts-based-vs-school-based-community-engaged-sickle-cell-disease" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2021: Dorothy Nam - Arts-Based Tools</a></li>
-                                <li><a href="https://cugh.confex.com/cugh/2021/poster/eposterview.cgi?eposterid=724" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2021: Kristen Jones - SCD Genetics Research (CUGH)</a></li>
-                                <li><a href="https://ghic.uniteforsight.org/posters-2021" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">2021: Kristen Jones - SCD Genetics (Unite for Sight)</a></li>
+                                <li><a href="https://globalhealth.duke.edu/student-showcases/creating-accessible-educational-tools-increase-community-awareness-sickle-cell" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2022: Bailey Griffen - Educational Tools</a></li>
+                                <li><a href="https://globalhealth.duke.edu/student-showcases/assessing-arts-based-vs-school-based-community-engaged-sickle-cell-disease" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2021: Dorothy Nam - Arts-Based Tools</a></li>
+                                <li><a href="https://cugh.confex.com/cugh/2021/poster/eposterview.cgi?eposterid=724" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2021: Kristen Jones - SCD Genetics Research (CUGH)</a></li>
+                                <li><a href="https://ghic.uniteforsight.org/posters-2021" target="_blank" rel="noopener noreferrer" className="text-[#012169] hover:underline">2021: Kristen Jones - SCD Genetics (Unite for Sight)</a></li>
                             </ul>
                         </div>
                     </div>
@@ -1280,31 +1047,35 @@ function Fundraising() {
             </div>
 
             {/* Contact Section */}
-            <div className="bg-gray-900 text-white py-12">
-                <div className="max-w-4xl mx-auto px-4 text-center">
+            <div className="bg-[#012169] text-white py-12 relative overflow-hidden">
+                {/* Background Image */}
+                <div className="absolute inset-0 z-0">
+                    <img
+                        src={import.meta.env.BASE_URL + "kalangala/kalangala_3.jpg"}
+                        alt="Kalangala"
+                        className="w-full h-full object-cover opacity-20"
+                    />
+                </div>
+                <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
                     <h2 className="text-3xl font-bold mb-6">Contact Us</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <h3 className="font-bold text-lg mb-2">Musawo Joel Kibonwabake</h3>
-                            <p className="text-gray-300">KHCIV Sickle Cell Clinic Director</p>
-                            <p className="text-blue-400">kibonwabake2008@gmail.com</p>
-                            <p className="text-gray-300">WhatsApp: +256-772-921-610</p>
+                            <p className="text-blue-200">KHCIV Sickle Cell Clinic Director</p>
+                            <p className="text-[#4B9CD3]">kibonwabake2008@gmail.com</p>
+                            <p className="text-blue-200">WhatsApp: +256-772-921-610</p>
                         </div>
                         <div>
                             <h3 className="font-bold text-lg mb-2">Professor Kearsley Stewart</h3>
-                            <p className="text-gray-300">Duke Global Health Institute</p>
-                            <p className="text-blue-400">k.stewart@duke.edu</p>
-                            <p className="text-gray-300">WhatsApp: +1 202-340-8818</p>
+                            <p className="text-blue-200">Duke Global Health Institute</p>
+                            <p className="text-[#4B9CD3]">k.stewart@duke.edu</p>
+                            <p className="text-blue-200">WhatsApp: +1 202-340-8818</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     )
-
 }
 
-
-
 export default Fundraising
-
