@@ -224,13 +224,50 @@ function Fundraising() {
         }
     }
 
+    // Transportation mode normalization mapping
+    const normalizeTransportMode = (rawMode) => {
+        if (!rawMode) return 'Unknown'
+        const mode = rawMode.toLowerCase().trim()
+        
+        // Motorcycle/Bodaboda variations
+        if (mode.includes('bodaboda') || mode.includes('boda') || mode.includes('motorcyle') || mode.includes('motocycle') || mode.includes('motorcycle')) {
+            if (mode.includes('boat') || mode.includes('tax')) {
+                return 'Boat + Motorcycle'
+            }
+            return 'Motorcycle (Bodaboda)'
+        }
+        
+        // Foot/Walking
+        if (mode === 'foot') {
+            return 'Walking'
+        }
+        
+        // Boat variations
+        if (mode.includes('boat')) {
+            return 'Boat'
+        }
+        
+        // Tax variations (without motorcycle)
+        if (mode.includes('tax')) {
+            return 'Taxi'
+        }
+        
+        // Multimodal combinations
+        if (mode.includes('-') && (mode.includes('foot') || mode.includes('boat') || mode.includes('boda'))) {
+            return 'Multimodal'
+        }
+        
+        return 'Other'
+    }
+
     // Transportation Analysis
     const transportationAnalysis = useMemo(() => {
         if (data.length === 0) return []
         const modes = {}
 
         data.forEach(row => {
-            const mode = row['Mode of Transport'] || 'Unknown'
+            const rawMode = row['Mode of Transport'] || ''
+            const mode = normalizeTransportMode(rawMode)
             const cost = parseAmount(row['Transport Cost (ugx) round-trip']) || 0
             const time = parseAmount(row['Travel Time (round-trip, minutes)']) || 0
 
@@ -255,7 +292,8 @@ function Fundraising() {
         const sources = {}
 
         data.forEach(row => {
-            const source = row.Source?.trim() || 'Unknown'
+            // CSV header has "Source " with trailing space
+            const source = (row['Source '] || row.Source || '').trim() || 'Unknown'
             const pills = parseAmount(row['Pills Purchased']) || 0
 
             if (!sources[source]) {
@@ -273,7 +311,7 @@ function Fundraising() {
             name: 'Duke University',
             sub: 'School of Medicine & Global Health Institute',
             people: 'Kearsley Stewart, Charmaine Royal, Nirmish Shah, Stephanie Ibemere',
-            logo: import.meta.env.BASE_URL + 'duke_health_logos/dh_horz_blue.png'
+            logo: import.meta.env.BASE_URL + 'dghi-logos/dghi-logo-horizontal-blue-transparent.png'
         },
         {
             id: 'makerere',
@@ -387,7 +425,7 @@ function Fundraising() {
                     {/* RIGHT SIDE: Partner Logos */}
                     <div className={`flex items-center gap-4 sm:gap-6 transition-all duration-500 ${isScrolled ? 'opacity-0 translate-x-10 pointer-events-none absolute right-0' : 'opacity-100 translate-x-0'}`}>
                         <div className="flex gap-3 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                            <img src={import.meta.env.BASE_URL + "duke_health_logos/dh_horz_white.png"} alt="Duke Health" className="h-8 sm:h-10 object-contain" />
+                            <img src={import.meta.env.BASE_URL + "dghi-logos/dghi-logo-horizontal-white-transparent.png"} alt="Duke Global Health Institute" className="h-8 sm:h-10 object-contain" />
                             <div className="w-px h-8 sm:h-10 bg-white/20"></div>
                             <img src={import.meta.env.BASE_URL + "img/unc_logo.png"} alt="UNC" className="h-8 sm:h-10 object-contain" />
                         </div>
@@ -459,7 +497,7 @@ function Fundraising() {
                                 <div className="flex h-32">
                                     <div className="w-1/3 bg-gray-200">
                                         <img
-                                            src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Sicklecells.jpg/640px-Sicklecells.jpg"
+                                            src="https://upload.wikimedia.org/wikipedia/commons/a/a1/Sickle_cells.jpg"
                                             alt="Sickle cells under microscope"
                                             className="w-full h-full object-cover"
                                         />
